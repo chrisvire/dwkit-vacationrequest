@@ -1,0 +1,53 @@
+version: '3.4'
+
+# Note that --project-directory ./source
+# must be passed to every docker-compose command
+# ./source is the docker-compose context
+
+volumes:
+  api-obj:
+  api-bin:
+  postgres-data:
+
+services:
+  db:
+    image: postgres:10
+    environment:
+      POSTGRES_DB: development
+      POSTGRES_USER: db-user
+      POSTGRES_PASSWORD: 1234
+      PGDATA: /var/lib/postgresql/data
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./DB:/scripts
+
+  # Debugging database
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      # Host:Container
+      - "28080:8080"
+    links:
+      - db:db.docker
+
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile.backend
+      target: development
+    command: bash -c " dotnet watch run"
+    ports:
+      - "8081:8081"
+    links:
+      - db:db.docker
+    environment:
+      PORT: 8081
+      ConnectionStrings:default: "User ID=db-user;Password=1234;Host=db.docker;Port=5432;Database=development;"
+
+    volumes:
+      - ./:/app
+      # - api-obj:/app/obj
+      # - api-bin:/app/bin
+
